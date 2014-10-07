@@ -1,5 +1,6 @@
 module Zipper where
 
+import Util
 import Types
 
 data Cxt node dat = Top | Descend dat [node] (Cxt node dat) [node] deriving (Show, Eq)
@@ -29,24 +30,4 @@ up :: Loc Node (LHV, Rect) -> Loc Node (LHV, Rect)
 up (_, Top) = error "Tried to go up on top"
 up (n, Descend (lhv, rect) leftNodes cxt rightNodes) = (IntNode lhv rect (leftNodes ++ (n : rightNodes)), cxt)
 
-
-treeTest = (IntNode 42 (Rect 0 0 10 10) [(LeafNode [
-                                             (IDRect (Rect 0 0 10 10) "A1"),
-                                             (IDRect (Rect 0 0 1 1) "A2"),
-                                             (IDRect (Rect 2 2 7 7) "A3")
-                                             ]),
-                                         (LeafNode [
-                                             (IDRect (Rect 0 0 10 10) "B1"),
-                                             (IDRect (Rect 0 0 1 1) "B2")
-                                             ]),
-                                         (LeafNode [
-                                             (IDRect (Rect 0 0 10 10) "C1"),
-                                             (IDRect (Rect 0 0 1 1) "C2"),
-                                             (IDRect (Rect 2 2 7 7) "C3")
-                                             ])])
-
-newLeaf = LeafNode [(IDRect (Rect 0 0 10 10) "D1"),
-                    (IDRect (Rect 0 0 1 1) "D2"),
-                    (IDRect (Rect 2 2 7 7) "D3")]
-
-topLoc = (treeTest, Top)
+makeZipper node = (node, Top)
