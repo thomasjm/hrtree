@@ -26,8 +26,6 @@ isFull (IntNode _ _ children) = length children == cn
 
 -- chooseLeaf :: Rect -> Node -> Lens Node
 
-
-
 treeTest = (IntNode 42 (Rect 0 0 10 10) [(LeafNode [
                                              (IDRect (Rect 0 0 10 10) "A1"),
                                              (IDRect (Rect 0 0 1 1) "A2"),
