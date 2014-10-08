@@ -1,5 +1,6 @@
 module Types where
 
+
 import Data.List (intercalate)
 
 type LHV = Integer
@@ -10,6 +11,6 @@ instance Show Rect where
 data IDRect = IDRect { getRect :: Rect, getId :: ID } deriving (Eq)
 instance Show IDRect where
   show (IDRect rect id) = "(" ++ id ++ ", " ++ (show rect) ++ ")"
-data Node = IntNode LHV Rect [Node] | LeafNode [IDRect] deriving (Show, Eq)
+data Node = IntNode LHV Rect [Node] | LeafNode LHV [IDRect] deriving (Show, Eq)
 
 type RTree = Node

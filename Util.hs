@@ -27,3 +27,6 @@ lastN :: Int -> [a] -> [a]
 lastN n xs = foldl' (const .drop 1) xs (drop n xs)
 
 a & b = b a
+
+rectCenter :: Rect -> (Integer, Integer)
+rectCenter (Rect xl yl xh yh) = (xh - xl, yh - yl)
