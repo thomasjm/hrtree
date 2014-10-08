@@ -27,8 +27,8 @@ isFull (LeafNode _ idRects) = length idRects == cl
 isFull (IntNode _ _ children) = length children == cn
 
 chooseLeaf :: Integer -> Node -> Loc Node (LHV, Rect)
-chooseLeaf h n@(LeafNode _ _) = makeZipper n
-chooseLeaf h n@(IntNode _ _ children) = makeZipper $ fromJust $ find (\x -> (getLHV x) > h) children
+chooseLeaf _ n@(LeafNode _ _) = makeZipper n
+chooseLeaf h (IntNode _ _ children) = makeZipper $ fromJust $ find (\x -> (getLHV x) > h) children
 
 hilbertDistanceFn :: (Integer, Integer) -> Integer
 hilbertDistanceFn = hilbertDistance (10 :: Int)
@@ -37,6 +37,7 @@ getLHV :: Node -> Integer
 getLHV (IntNode lhv _ _) = lhv
 getLHV (LeafNode lhv _) = lhv
 
+treeTest :: RTree
 treeTest = (IntNode 42 (Rect 0 0 10 10) [(LeafNode 10 [
                                              (IDRect (Rect 0 0 10 10) "A1"),
                                              (IDRect (Rect 0 0 1 1) "A2"),
