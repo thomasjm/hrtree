@@ -1,8 +1,12 @@
 module Util where
 
+import Params
 import Types
 import Data.Bits
 import Data.List (foldl')
+
+import Zora.Graphing.DAGGraphing
+
 
 hilbertDistance :: (Num a, Bits a, Ord a) => Int -> (a,a) -> a
 hilbertDistance d (x,y)
@@ -55,3 +59,30 @@ buildIntNode children = IntNode lhv rect children where
 getLHV :: Node -> LHV
 getLHV (IntNode lhv _ _) = lhv
 getLHV (LeafNode idRects) = maximum $ map (hilbertDistanceOfRect . getRect) idRects
+
+{- Return true if the node is full or overflowed -}
+isFull :: Node -> Bool
+isFull (LeafNode idRects) = length idRects >= cl
+isFull (IntNode _ _ children) = length children >= cn
+
+{- Get the list of Hilbert values of a Node's children.
+For an interior node, this is a list of LHVs of the nodes under it.
+For a leaf node, this is a list of the Hilbert values of its rectangles -}
+getHilbertValues :: Node -> [Integer]
+getHilbertValues (LeafNode idRects) = map (hilbertDistanceOfRect . getRect) idRects
+getHilbertValues (IntNode _ _ children) = map getLHV children
+
+isOrdered :: Ord a => [a] -> Bool
+isOrdered (x:y:xs) | x<=y = isOrdered (y:xs)
+                   | otherwise = False
+isOrdered _ = True
+
+isLeafNode :: Node -> Bool
+isLeafNode (IntNode _ _ _) = False
+isLeafNode (LeafNode _) = True
+
+instance DAGGraphable Node where
+  expand (LeafNode idRects) = Just (Just $ show idRects, [])
+  expand (IntNode lhv rect children) = Just (Just $ show (lhv, rect), map f children) where
+    f n@(LeafNode _) = (Just $ show $ maximum $ getHilbertValues n, n)
+    f n@(IntNode lhv _ _) = (Just $ show lhv, n)

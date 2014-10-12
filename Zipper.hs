@@ -1,5 +1,5 @@
 {-# LANGUAGE MultiParamTypeClasses, FunctionalDependencies #-}
-module Zipper (makeZipper, up, down, left, right, replace, root, focus, Loc, TreeZippable(..)) where
+module Zipper (makeZipper, up, down, left, right, replace, root, focus, isTop, Loc, TreeZippable(..)) where
 
 import Util
 
@@ -37,6 +37,10 @@ up (Loc (n, Descend dat leftNodes cxt rightNodes)) = Loc (newNode dat (leftNodes
 
 focus :: Loc node dat -> node
 focus (Loc (node, _)) = node
+
+isTop :: Loc node dat -> Bool
+isTop (Loc (n, Top)) = True
+isTop _ = False
 
 makeZipper :: node -> Loc node dat
 makeZipper node = Loc (node, Top)
