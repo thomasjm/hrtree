@@ -4,6 +4,7 @@ import Params
 import Types
 import Data.Bits
 import Data.List (foldl')
+import Data.List.Split (chunksOf)
 
 import Zora.Graphing.DAGGraphing
 
@@ -62,8 +63,12 @@ getLHV (LeafNode idRects) = maximum $ map (hilbertDistanceOfRect . getRect) idRe
 
 {- Return true if the node is full or overflowed -}
 isFull :: Node -> Bool
-isFull (LeafNode idRects) = length idRects >= cl
-isFull (IntNode _ _ children) = length children >= cn
+isFull (LeafNode idRects) = length idRects > cl
+isFull (IntNode _ _ children) = length children > cn
+
+isOverflowed :: Node -> Bool
+isOverflowed (LeafNode idRects) = length idRects > cl
+isOverflowed (IntNode _ _ children) = length children > cn
 
 {- Get the list of Hilbert values of a Node's children.
 For an interior node, this is a list of LHVs of the nodes under it.
@@ -94,3 +99,14 @@ getChildRects (IntNode _ _ children) = map getNodeRect children
 getNodeRect :: Node -> Rect
 getNodeRect (LeafNode idRects) = boundingRect $ map getRect idRects
 getNodeRect (IntNode _ r _) = r
+
+getLeafChildren :: Node -> [Node]
+getLeafChildren (IntNode _ _ children) = filter isLeafNode children
+getLeafChildren (LeafNode {}) = error "Tried to get leaf children of LeafNode"
+
+
+{- Divide a list of items as evenly as possible into n groups -}
+distributeItems :: Int -> [a] -> [[a]]
+distributeItems n items = chunksOf chunkSize items where
+  chunkSize = let (quot, rem) = length items `quotRem` n in
+    quot + (if rem == 0 then 0 else 1)

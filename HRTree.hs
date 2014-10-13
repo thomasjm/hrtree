@@ -5,9 +5,9 @@ import Types
 import Util
 import Zipper
 
+import Data.Function (on)
 import Data.Maybe (fromJust)
-import Data.List (foldl', intercalate, find, findIndex)
-import Data.List.Split (chunksOf)
+import Data.List (foldl', intercalate, find, findIndex, sortBy)
 
 import Debug.Trace (trace)
 
@@ -40,18 +40,27 @@ insert idRect node = replace newLeaf leaf -- Insert the new leaf node
                      & root where
     f = hilbertDistanceOfRect . getRect
 
-    newHilbertVal = f idRect
-
-    leaf = chooseLeaf newHilbertVal (makeZipper node)
+    leaf = chooseLeaf (f idRect) (makeZipper node)
     idRects = getIDRects $ focus leaf
-    newLeaf = LeafNode ([x | x <- idRects, f x < newHilbertVal] ++ [idRect] ++ [x | x <- idRects, f x >= newHilbertVal])
+
+    -- Make a new leaf node with the new IDRect inserted
+    -- TODO: replace with more efficient sorted insert
+    newLeaf = LeafNode ([x | x <- idRects, f x < f idRect] ++ [idRect] ++ [x | x <- idRects, f x >= f idRect])
+
+fixupNode :: Node -> Node
+fixupNode n@(LeafNode {}) = n -- Nothing to be done
+fixupNode n@(IntNode _ _ children) = IntNode lhv rect children where
+  lhv = maximum $ map getLHV children
+  rect = boundingRect $ map getBoundingRect children
 
 -- Handle overflow of leaf node. Takes in a NodeZipper that's pointed at a leaf node,
 -- and splits it up if necessary. Returns the parent
 handleOverflow :: NodeZipper -> NodeZipper
 handleOverflow nz
-    -- If the node we added to is not full, just fix up its parents
-    | not $ isFull (focus nz) = fixParents nz
+    -- If the node we added to is not full, just fix up its values and keep going up
+    | not $ isOverflowed (focus nz) = if isTop nz
+                                      then nz & replace (fixupNode (focus nz))
+                                      else nz & replace (fixupNode (focus nz)) & up & handleOverflow
     -- If it is full but is at the top, return the new parent
     | isTop nz = makeZipper newParent
     -- If we're not at the top yet, recurse on the new parent
@@ -64,39 +73,34 @@ handleOverflow nz
       -- if we're trying to divide up Nodes, we'll get the IntNode siblings.
       (siblings, others) = getCooperatingSiblings nz
 
-      epsilon = concatMap getChildRects siblings
-      maxLHV = maximum $ map getHV epsilon
-      mbr = boundingRect $ map getRect epsilon
-
       numNodesToDistributeAmong = if all isFull siblings then length siblings + 1 else length siblings
-      newSiblings = distributeRects numNodesToDistributeAmong epsilon
-      newParent = IntNode maxLHV mbr newSiblings
+
+      newSiblings :: [Node]
+      newSiblings = case head siblings of
+        (LeafNode {}) -> map LeafNode $ distributeItems numNodesToDistributeAmong (concatMap getIDRects siblings)
+        (IntNode {}) -> map (IntNode 0 (Rect 0 0 0 0)) $ distributeItems numNodesToDistributeAmong (concatMap getIntChildren siblings)
+
+      newParent = IntNode 0 (Rect 0 0 0 0) $ sortBy (compare `on` getLHV) (newSiblings ++ others)
 
 
-fixParents :: NodeZipper -> NodeZipper
-fixParents nz | isLeafNode $ focus nz = nz
-              | isTop nz = fixedNz
-              | otherwise = fixParents (up fixedNz) where
-        node@(IntNode _ _ children) = focus nz
-        fixedNz = replace newNode nz
-        newNode = IntNode (maximum $ map getLHV children) (boundingRect $ map getBoundingRect children) children
+-- fixParents :: NodeZipper -> NodeZipper
+-- fixParents nz | isLeafNode $ focus nz = nz
+--               | isTop nz = fixedNz
+--               | otherwise = fixParents (up fixedNz) where
+--         node@(IntNode _ _ children) = focus nz
+--         fixedNz = replace newNode nz
+--         newNode = IntNode (maximum $ map getLHV children) (boundingRect $ map getBoundingRect children) children
 
 
-
-
--- Break the list of IDRects into n LeafNodes
-distributeRects :: Int -> [IDRect] -> [Node]
-distributeRects n idRects = map LeafNode $ chunksOf chunkSize idRects where
-  chunkSize = let (quot, rem) = length idRects `quotRem` n in
-    quot + (if rem == 0 then 0 else 1)
-
+{- Get cooperating siblings for splitting purposes. Returns (chosen siblings, non-chosen siblings) -}
 getCooperatingSiblings :: NodeZipper -> ([Node], [Node])
 getCooperatingSiblings nz | isTop nz = ([focus nz], [])
                           | otherwise = case focus nz of
                                          (LeafNode _) -> (leafChildren, intChildren)
-                                         (IntNode {}) -> (intChildren, leafChildren) where
-                                           parent = focus (up nz)
-                                           leafChildren = getLeafChildren parent
-                                           intChildren = getIntchildren parent
+                                         (IntNode {}) -> (intChildren, leafChildren)
+  where
+    parent = focus (up nz)
+    leafChildren = getLeafChildren parent
+    intChildren = getIntChildren parent
 
 emptyRTree = LeafNode []

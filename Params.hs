@@ -1,7 +1,7 @@
 module Params (cl, cn) where
 
 cl :: Int
-cl = 10
+cl = 2
 
 cn :: Int
-cn = 10
+cn = 2
