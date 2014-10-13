@@ -58,9 +58,13 @@ handleOverflow nz
     | otherwise = nz & up & replace newParent & handleOverflow
 
     where
-      siblings = getSiblingNodes nz
+      -- Try to distribute the nodes among the cooperating siblings.
+      -- These siblings are of the same type as (focus nz). Thus, if we're trying
+      -- to re-apportion IDRects, we'll only get the LeafNode siblings. Otherwise,
+      -- if we're trying to divide up Nodes, we'll get the IntNode siblings.
+      (siblings, others) = getCooperatingSiblings nz
 
-      epsilon = concatMap getIDRects siblings
+      epsilon = concatMap getChildRects siblings
       maxLHV = maximum $ map getHV epsilon
       mbr = boundingRect $ map getRect epsilon
 
@@ -86,7 +90,13 @@ distributeRects n idRects = map LeafNode $ chunksOf chunkSize idRects where
   chunkSize = let (quot, rem) = length idRects `quotRem` n in
     quot + (if rem == 0 then 0 else 1)
 
-getSiblingNodes :: NodeZipper -> [Node]
-getSiblingNodes nz = if isTop nz then [focus nz] else getIntChildren $ focus (up nz)
+getCooperatingSiblings :: NodeZipper -> ([Node], [Node])
+getCooperatingSiblings nz | isTop nz = ([focus nz], [])
+                          | otherwise = case focus nz of
+                                         (LeafNode _) -> (leafChildren, intChildren)
+                                         (IntNode {}) -> (intChildren, leafChildren) where
+                                           parent = focus (up nz)
+                                           leafChildren = getLeafChildren parent
+                                           intChildren = getIntchildren parent
 
 emptyRTree = LeafNode []

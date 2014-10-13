@@ -86,3 +86,11 @@ instance DAGGraphable Node where
   expand (IntNode lhv rect children) = Just (Just $ show (lhv, rect), map f children) where
     f n@(LeafNode _) = (Just $ show $ maximum $ getHilbertValues n, n)
     f n@(IntNode lhv _ _) = (Just $ show lhv, n)
+
+getChildRects :: Node -> [Rect]
+getChildRects n@(LeafNode _) = map getRect $ getIDRects n
+getChildRects (IntNode _ _ children) = map getNodeRect children
+
+getNodeRect :: Node -> Rect
+getNodeRect (LeafNode idRects) = boundingRect $ map getRect idRects
+getNodeRect (IntNode _ r _) = r

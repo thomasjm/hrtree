@@ -14,6 +14,7 @@ import Data.Function (on)
 
 import Zora.Graphing.DAGGraphing (graph)
 import System.IO.Unsafe (unsafePerformIO)
+import Control.Exception
 
 main = putStrLn "asdf"
 
@@ -71,6 +72,28 @@ test = insert newRect x where
     x = unsafePerformIO $ generate fullLeaf
     newRect = unsafePerformIO $ generate (arbitrary :: Gen IDRect)
 
+randomInserts n = map insert $ unsafePerformIO $ generate $ vectorOf n (arbitrary :: Gen IDRect)
+
 test2 n = f emptyRTree where
     randomInserts = map insert $ unsafePerformIO $ generate $ vectorOf n (arbitrary :: Gen IDRect)
     f = foldl (.) id randomInserts
+
+{- Check that a tree is valid. This includes
+   1. The LHV and MBR of each interior node are correct
+   2. The children of an interior node are arranged in increasing order of LHV -}
+isValidTree :: Node -> Bool
+isValidTree n = undefined
+
+dangerous :: a -> (a -> a) -> IO a
+dangerous x f = do
+  return (f x)
+
+tryTransformations :: a -> [a -> a] -> a
+tryTransformations x [] = x
+tryTransformations x (f:fs) = case unsafePerformIO result of
+                                Nothing -> x
+                                Just newX -> tryTransformations newX fs
+    where
+      result = catch (dangerous (Just x) (liftM f)) (\e -> do
+                                                       putStrLn $ "Got an error: " ++ (show $ (e :: SomeException))
+                                                       return Nothing)
