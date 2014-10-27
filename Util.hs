@@ -7,7 +7,7 @@ import Data.List (foldl')
 import Data.List.Split (chunksOf)
 
 import Zora.Graphing.DAGGraphing
-
+import System.IO.Unsafe (unsafePerformIO)
 
 hilbertDistance :: (Num a, Bits a, Ord a) => Int -> (a,a) -> a
 hilbertDistance d (x,y)
@@ -63,12 +63,15 @@ getLHV (LeafNode idRects) = maximum $ map (hilbertDistanceOfRect . getRect) idRe
 
 {- Return true if the node is full or overflowed -}
 isFull :: Node -> Bool
-isFull (LeafNode idRects) = length idRects > cl
-isFull (IntNode _ _ children) = length children > cn
+isFull (LeafNode idRects) = length idRects == cl
+isFull (IntNode _ _ children) = length children == cn
 
 isOverflowed :: Node -> Bool
 isOverflowed (LeafNode idRects) = length idRects > cl
 isOverflowed (IntNode _ _ children) = length children > cn
+
+-- TODO: nice way to do this?
+isFullOrOverflowed x = or [isFull x, isOverflowed x]
 
 {- Get the list of Hilbert values of a Node's children.
 For an interior node, this is a list of LHVs of the nodes under it.
@@ -103,6 +106,11 @@ getNodeRect (IntNode _ r _) = r
 getLeafChildren :: Node -> [Node]
 getLeafChildren (IntNode _ _ children) = filter isLeafNode children
 getLeafChildren (LeafNode {}) = error "Tried to get leaf children of LeafNode"
+
+getIntChildren :: Node -> [Node]
+getIntChildren (IntNode _ _ children) = filter (not . isLeafNode) children
+getIntChildren (LeafNode {}) = error "Tried to get int children of LeafNode"
+
 
 
 {- Divide a list of items as evenly as possible into n groups -}

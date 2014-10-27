@@ -6,7 +6,7 @@ import Data.Generics
 
 import Data.List (intercalate)
 
-data Node = IntNode { getIntLHV :: LHV, getIntRect :: Rect, getIntChildren :: [Node] } |
+data Node = IntNode { getIntLHV :: LHV, getIntRect :: Rect, getChildren :: [Node] } |
             LeafNode { getIDRects :: [IDRect] } deriving (Show, Eq, Data, Typeable)
 
 

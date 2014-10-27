@@ -1,3 +1,4 @@
+{-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE ConstraintKinds, FlexibleInstances, MultiParamTypeClasses #-}
 module HRTree where
 
@@ -6,10 +7,19 @@ import Util
 import Zipper
 
 import Data.Function (on)
-import Data.Maybe (fromJust)
+import Data.Maybe (fromJust, mapMaybe)
 import Data.List (foldl', intercalate, find, findIndex, sortBy)
 
-import Debug.Trace (trace)
+import System.Directory
+import System.FilePath
+import Text.Read
+
+-- Debugging stuff
+import Zora.Graphing.DAGGraphing (render)
+import Debug.Trace (trace, traceShow)
+import System.IO.Unsafe (unsafePerformIO)
+import System.Random
+
 
 {- Define a TreeZippable instance for Node and a convenience type synonym -}
 instance TreeZippable Node (LHV, Rect) where
@@ -35,7 +45,15 @@ chooseLeaf h n = case focus n of
 
 {- Insert -}
 insert :: IDRect -> RTree -> RTree
-insert idRect node = replace newLeaf leaf -- Insert the new leaf node
+insert idRect node = (trace ("Chosen leaf: " ++ (show $ focus leaf))) $
+                     (trace ("Got new leaf: " ++ (show newLeaf))) $
+
+                     leaf
+                     & logState "chosen"
+                     & replace newLeaf -- Insert the new leaf node
+
+                     & logState "insert_done"
+
                      & handleOverflow -- Split the leaf node up if necessary
                      & root where
     f = hilbertDistanceOfRect . getRect
@@ -53,10 +71,36 @@ fixupNode n@(IntNode _ _ children) = IntNode lhv rect children where
   lhv = maximum $ map getLHV children
   rect = boundingRect $ map getBoundingRect children
 
+pngNum :: FilePath -> Maybe Integer
+pngNum filename = case (readMaybe name :: Maybe Integer, extension) of
+                    (Just x, ".png") -> Just x
+                    _ -> Nothing
+    where
+      (name, extension) = splitExtension filename
+
 -- Handle overflow of leaf node. Takes in a NodeZipper that's pointed at a leaf node,
 -- and splits it up if necessary. Returns the parent
 handleOverflow :: NodeZipper -> NodeZipper
-handleOverflow nz
+handleOverflow nz = unsafePerformIO $ do
+                      files <- getDirectoryContents "/tmp"
+
+                      logStateIO "before_handle_overflow" nz
+
+                      let maxNum = maximum $ [0] ++ mapMaybe pngNum files
+                          outputImageName = ("/tmp/" ++ show (maxNum+1) ++ ".png")
+                          inputImageName = ("/tmp/" ++ show (-(maxNum+1)) ++ ".png")
+
+                      render inputImageName $ root nz
+                      let newTree = handleOverflow' nz
+                      render outputImageName $ root newTree
+
+                      logStateIO "after_handle_overflow" newTree
+
+                      return newTree
+
+
+handleOverflow' :: NodeZipper -> NodeZipper
+handleOverflow' nz
     -- If the node we added to is not full, just fix up its values and keep going up
     | not $ isOverflowed (focus nz) = if isTop nz
                                       then nz & replace (fixupNode (focus nz))
@@ -64,7 +108,7 @@ handleOverflow nz
     -- If it is full but is at the top, return the new parent
     | isTop nz = makeZipper newParent
     -- If we're not at the top yet, recurse on the new parent
-    | otherwise = nz & up & replace newParent & handleOverflow
+    | otherwise = up nz & replace newParent & handleOverflow
 
     where
       -- Try to distribute the nodes among the cooperating siblings.
@@ -73,7 +117,7 @@ handleOverflow nz
       -- if we're trying to divide up Nodes, we'll get the IntNode siblings.
       (siblings, others) = getCooperatingSiblings nz
 
-      numNodesToDistributeAmong = if all isFull siblings then length siblings + 1 else length siblings
+      numNodesToDistributeAmong = if all isFullOrOverflowed siblings then length siblings + 1 else length siblings
 
       newSiblings :: [Node]
       newSiblings = case head siblings of
@@ -81,15 +125,6 @@ handleOverflow nz
         (IntNode {}) -> map (IntNode 0 (Rect 0 0 0 0)) $ distributeItems numNodesToDistributeAmong (concatMap getIntChildren siblings)
 
       newParent = IntNode 0 (Rect 0 0 0 0) $ sortBy (compare `on` getLHV) (newSiblings ++ others)
-
-
--- fixParents :: NodeZipper -> NodeZipper
--- fixParents nz | isLeafNode $ focus nz = nz
---               | isTop nz = fixedNz
---               | otherwise = fixParents (up fixedNz) where
---         node@(IntNode _ _ children) = focus nz
---         fixedNz = replace newNode nz
---         newNode = IntNode (maximum $ map getLHV children) (boundingRect $ map getBoundingRect children) children
 
 
 {- Get cooperating siblings for splitting purposes. Returns (chosen siblings, non-chosen siblings) -}
@@ -104,3 +139,16 @@ getCooperatingSiblings nz | isTop nz = ([focus nz], [])
     intChildren = getIntChildren parent
 
 emptyRTree = LeafNode []
+
+----------------------------------------------------------------------------
+
+
+logStateIO :: String -> NodeZipper -> IO NodeZipper
+logStateIO s nz = do
+  let num = unsafePerformIO (getStdRandom (randomR (0, 100000000))) :: Int
+      filename = "/tmp/hrtree/" ++ s ++ "_" ++ (show num) ++ "_" ++ ".png"
+  render filename $ root nz
+  return nz
+
+logState :: String -> NodeZipper -> NodeZipper
+logState s nz = unsafePerformIO $ logStateIO s nz

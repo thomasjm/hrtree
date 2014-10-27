@@ -23,18 +23,18 @@ intersectionTest =  describe "Rectangle intersections" $ do
 searchTest = describe "Search" $ do
   it "should work on a single leaf node" $
     search (Rect 3 3 5 5) (LeafNode [
-                              (IDRect (Rect 0 0 10 10) "rect1"),
-                              (IDRect (Rect 0 0 1 1) "rect2"),
-                              (IDRect (Rect 2 2 7 7) "rect3")
+                              (IDRect (Rect 0 0 10 10) "rect1" 0),
+                              (IDRect (Rect 0 0 1 1) "rect2" 0),
+                              (IDRect (Rect 2 2 7 7) "rect3" 0)
                               ])
     `shouldBe` ["rect1", "rect3"]
 
   it "should work on a single interior node with a single leaf node" $
     search (Rect 3 3 5 5) (IntNode 42 (Rect 0 0 10 10)
                            [(LeafNode [
-                               (IDRect (Rect 0 0 10 10) "rect1"),
-                               (IDRect (Rect 0 0 1 1) "rect2"),
-                               (IDRect (Rect 2 2 7 7) "rect3")
+                               (IDRect (Rect 0 0 10 10) "rect1" 0),
+                               (IDRect (Rect 0 0 1 1) "rect2" 0),
+                               (IDRect (Rect 2 2 7 7) "rect3" 0)
                            ])])
     `shouldBe` ["rect1", "rect3"]
 

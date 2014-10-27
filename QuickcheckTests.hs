@@ -1,3 +1,4 @@
+{-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE TypeSynonymInstances, FlexibleInstances #-}
 module QuickcheckTests where
 
@@ -12,9 +13,11 @@ import Control.Monad
 import Data.List (sortBy)
 import Data.Function (on)
 
-import Zora.Graphing.DAGGraphing (graph)
+import Zora.Graphing.DAGGraphing (render)
+import Shelly (run, liftIO, shelly, escaping)
 import System.IO.Unsafe (unsafePerformIO)
 import Control.Exception
+import Debug.Trace (trace)
 
 main = putStrLn "asdf"
 
@@ -68,18 +71,23 @@ instance Arbitrary IDRect where
     id <- elements (['A'..'Z'] ++ ['a' .. 'z'])
     return $ IDRect r [id] $ hilbertDistanceFn $ rectCenter r
 
-test = insert newRect x where
-    x = unsafePerformIO $ generate fullLeaf
-    newRect = unsafePerformIO $ generate (arbitrary :: Gen IDRect)
-
-randomInserts n = map insert $ unsafePerformIO $ generate $ vectorOf n (arbitrary :: Gen IDRect)
-
 test2 n = f emptyRTree where
     randomInserts = map insert $ unsafePerformIO $ generate $ vectorOf n (arbitrary :: Gen IDRect)
     f = foldl (.) id randomInserts
 
+testInserts rects = f emptyRTree where
+  randomInserts = map (insert . (\x -> trace ("\nInserting rect: " ++ show x) x)) rects
+  f = foldl (.) id randomInserts
+
+
+rects = unsafePerformIO $ generate $ vectorOf 10 (arbitrary :: Gen IDRect)
+test n = shelly $ escaping False $ do
+           run "rm" ["-f", "/tmp/hrtree/*"]
+           liftIO $ render "viz.png" $ testInserts (take n rects)
+
+
 {- Check that a tree is valid. This includes
-   1. The LHV and MBR of each interior node are correct
+   1. The LHV and MBR of each interior node azre correct
    2. The children of an interior node are arranged in increasing order of LHV -}
 isValidTree :: Node -> Bool
 isValidTree n = undefined
