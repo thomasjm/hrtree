@@ -65,37 +65,22 @@ insert idRect node = (trace ("Chosen leaf: " ++ (show $ focus leaf))) $
     -- TODO: replace with more efficient sorted insert
     newLeaf = LeafNode ([x | x <- idRects, f x < f idRect] ++ [idRect] ++ [x | x <- idRects, f x >= f idRect])
 
+newParentContaining :: [Node] -> Node
+newParentContaining = fixupNode . (IntNode 0 (Rect 0 0 0 0))
+
 fixupNode :: Node -> Node
 fixupNode n@(LeafNode {}) = n -- Nothing to be done
 fixupNode n@(IntNode _ _ children) = IntNode lhv rect children where
   lhv = maximum $ map getLHV children
   rect = boundingRect $ map getBoundingRect children
 
-pngNum :: FilePath -> Maybe Integer
-pngNum filename = case (readMaybe name :: Maybe Integer, extension) of
-                    (Just x, ".png") -> Just x
-                    _ -> Nothing
-    where
-      (name, extension) = splitExtension filename
-
 -- Handle overflow of leaf node. Takes in a NodeZipper that's pointed at a leaf node,
 -- and splits it up if necessary. Returns the parent
 handleOverflow :: NodeZipper -> NodeZipper
 handleOverflow nz = unsafePerformIO $ do
-                      files <- getDirectoryContents "/tmp"
-
                       logStateIO "before_handle_overflow" nz
-
-                      let maxNum = maximum $ [0] ++ mapMaybe pngNum files
-                          outputImageName = ("/tmp/" ++ show (maxNum+1) ++ ".png")
-                          inputImageName = ("/tmp/" ++ show (-(maxNum+1)) ++ ".png")
-
-                      render inputImageName $ root nz
                       let newTree = handleOverflow' nz
-                      render outputImageName $ root newTree
-
                       logStateIO "after_handle_overflow" newTree
-
                       return newTree
 
 
@@ -122,9 +107,9 @@ handleOverflow' nz
       newSiblings :: [Node]
       newSiblings = case head siblings of
         (LeafNode {}) -> map LeafNode $ distributeItems numNodesToDistributeAmong (concatMap getIDRects siblings)
-        (IntNode {}) -> map (IntNode 0 (Rect 0 0 0 0)) $ distributeItems numNodesToDistributeAmong (concatMap getIntChildren siblings)
+        (IntNode {}) -> map newParentContaining $ distributeItems numNodesToDistributeAmong (concatMap allChildren siblings)
 
-      newParent = IntNode 0 (Rect 0 0 0 0) $ sortBy (compare `on` getLHV) (newSiblings ++ others)
+      newParent = newParentContaining $ sortBy (compare `on` getLHV) (newSiblings ++ others)
 
 
 {- Get cooperating siblings for splitting purposes. Returns (chosen siblings, non-chosen siblings) -}

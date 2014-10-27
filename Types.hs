@@ -6,7 +6,7 @@ import Data.Generics
 
 import Data.List (intercalate)
 
-data Node = IntNode { getIntLHV :: LHV, getIntRect :: Rect, getChildren :: [Node] } |
+data Node = IntNode { getIntLHV :: LHV, getIntRect :: Rect, allChildren :: [Node] } |
             LeafNode { getIDRects :: [IDRect] } deriving (Show, Eq, Data, Typeable)
 
 
@@ -15,8 +15,8 @@ type ID = String
 
 data Rect = Rect Integer Integer Integer Integer deriving (Eq, Data, Typeable)
 instance Show Rect where
-  show (Rect xl yl xh yh) = "R"
-  -- show (Rect xl yl xh yh) = "(" ++ (intercalate ", " $ map show [xl, yl, xh, yh]) ++ ")"
+  -- show (Rect xl yl xh yh) = "R"
+  show (Rect xl yl xh yh) = "(" ++ (intercalate ", " $ map show [xl, yl, xh, yh]) ++ ")"
 
 data IDRect = IDRect {
   getRect :: Rect,
