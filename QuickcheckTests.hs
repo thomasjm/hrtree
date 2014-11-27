@@ -18,6 +18,7 @@ import Shelly (run, liftIO, shelly, escaping)
 import System.IO.Unsafe (unsafePerformIO)
 import Control.Exception
 import Debug.Trace (trace)
+import DiagramHRTree
 
 main = putStrLn "asdf"
 

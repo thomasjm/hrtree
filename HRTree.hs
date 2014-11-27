@@ -49,10 +49,10 @@ insert idRect node = (trace ("Chosen leaf: " ++ (show $ focus leaf))) $
                      (trace ("Got new leaf: " ++ (show newLeaf))) $
 
                      leaf
-                     & logState "chosen"
+                     -- & logState "chosen"
                      & replace newLeaf -- Insert the new leaf node
 
-                     & logState "insert_done"
+                     -- & logState "insert_done"
 
                      & handleOverflow -- Split the leaf node up if necessary
                      & root where
@@ -78,9 +78,9 @@ fixupNode n@(IntNode _ _ children) = IntNode lhv rect children where
 -- and splits it up if necessary. Returns the parent
 handleOverflow :: NodeZipper -> NodeZipper
 handleOverflow nz = unsafePerformIO $ do
-                      logStateIO "before_handle_overflow" nz
+                      -- logStateIO "before_handle_overflow" nz
                       let newTree = handleOverflow' nz
-                      logStateIO "after_handle_overflow" newTree
+                      -- logStateIO "after_handle_overflow" newTree
                       return newTree
 
 
