@@ -88,7 +88,7 @@ test n = shelly $ escaping False $ do
 
 
 {- Check that a tree is valid. This includes
-   1. The LHV and MBR of each interior node azre correct
+   1. The LHV and MBR of each interior node are correct
    2. The children of an interior node are arranged in increasing order of LHV -}
 isValidTree :: Node -> Bool
 isValidTree n = undefined
