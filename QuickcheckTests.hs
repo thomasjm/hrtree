@@ -1,3 +1,4 @@
+{-# LANGUAGE TemplateHaskell #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE TypeSynonymInstances, FlexibleInstances #-}
 module QuickcheckTests where
@@ -10,56 +11,22 @@ import Types
 import Util
 
 import Control.Monad
-import Data.List (sortBy)
 import Data.Function (on)
+import Data.List (sortBy, sort)
+import Data.Monoid
 
-import Zora.Graphing.DAGGraphing (render)
-import Shelly (run, liftIO, shelly, escaping)
-import System.IO.Unsafe (unsafePerformIO)
 import Control.Exception
 import Debug.Trace (trace)
 import DiagramHRTree
+import Shelly (run, liftIO, shelly, escaping)
+import System.IO.Unsafe (unsafePerformIO)
+import Zora.Graphing.DAGGraphing (render)
 
-main = putStrLn "asdf"
 
-instance Arbitrary RTree where
-  arbitrary = tree
+runTests = $quickCheckAll
 
-tree :: Gen Node
-tree = sized tree'
-tree' :: Int -> Gen Node
-tree' 0 = liftM LeafNode arbitrary
-tree' n | n>0 =
-	oneof [liftM LeafNode shortIDRectList,
-	       liftM3 IntNode arbitrary arbitrary shortNodeList]
-  where subtree = tree' (n `div` 2)
-
-{- Inserting IDRects into a leaf puts them in in order of increasing Hilbert value -}
-prop_OrderedLeafInserts :: [IDRect] -> Bool
-prop_OrderedLeafInserts idRects = isOrdered $ getHilbertValues leafNode where
-  leafNode = insertAll (LeafNode [])
-  insertAll = foldl (.) id (map insert idRects)
-
-fullLeaf :: Gen Node
-fullLeaf = liftM LeafNode $
-           liftM (sortBy (compare `on` getHV)) $
-           vectorOf cl (arbitrary :: Gen IDRect)
-
-arbitraryLeafNode :: Gen Node
-arbitraryLeafNode = liftM LeafNode $ shortIDRectList
-
-shortNodeList :: Gen [Node]
-shortNodeList = resize 3 $ listOf1 (arbitrary :: Gen Node)
-
-shortIDRectList :: Gen [IDRect]
-shortIDRectList = resize 5 $ listOf1 (arbitrary :: Gen IDRect)
-
-randomIntNode :: Gen Node
-randomIntNode = do
-  children <- shortNodeList
-  let lhv = maximum $ map getLHV children
-      rect = boundingRect (map getBoundingRect children)
-  return $ IntNode lhv rect $ sortBy (compare `on` getLHV) children
+--------------------------------------------------------------------------
+-- * Arbitrary instances
 
 instance Arbitrary Rect where
   arbitrary = do
@@ -72,37 +39,66 @@ instance Arbitrary IDRect where
     id <- elements (['A'..'Z'] ++ ['a' .. 'z'])
     return $ IDRect r [id] $ hilbertDistanceFn $ rectCenter r
 
-test2 n = f emptyRTree where
-    randomInserts = map insert $ unsafePerformIO $ generate $ vectorOf n (arbitrary :: Gen IDRect)
-    f = foldl (.) id randomInserts
+instance Arbitrary RTree where
+  arbitrary = tree
 
-testInserts rects = f emptyRTree where
-  randomInserts = map (insert . (\x -> trace ("\nInserting rect: " ++ show x) x)) rects
-  f = foldl (.) id randomInserts
+tree :: Gen Node
+tree = sized tree'
+tree' :: Int -> Gen Node
+tree' 0 = liftM LeafNode arbitrary
+tree' n | n > 0 =
+	oneof [liftM LeafNode (resize n $ listOf (arbitrary :: Gen IDRect)),
+	       liftM3 IntNode arbitrary arbitrary (listOf (tree' (n `div` 2)))]
 
-
-rects = unsafePerformIO $ generate $ vectorOf 10 (arbitrary :: Gen IDRect)
-test n = shelly $ escaping False $ do
-           run "rm" ["-f", "/tmp/hrtree/*"]
-           liftIO $ render "viz.png" $ testInserts (take n rects)
-
+--------------------------------------------------------------------------
+-- * Checking that a tree is actually valid
 
 {- Check that a tree is valid. This includes
    1. The LHV and MBR of each interior node are correct
    2. The children of an interior node are arranged in increasing order of LHV -}
 isValidTree :: Node -> Bool
-isValidTree n = undefined
+isValidTree n@(IntNode lhv mbr children) = and [
+  lhv == maximum (map getLHVRecursively children),
+  mbr == mconcat (map getMBRRecursively children),
+  prop_HilbertValsOrdered n
+  ]
+isValidTree (LeafNode _) = True
 
-dangerous :: a -> (a -> a) -> IO a
-dangerous x f = do
-  return (f x)
+getLHVRecursively :: Node -> LHV
+getLHVRecursively (IntNode lhv mbr children) = maximum $ map getLHVRecursively children
+getLHVRecursively l@(LeafNode _) = getLHV l
 
-tryTransformations :: a -> [a -> a] -> a
-tryTransformations x [] = x
-tryTransformations x (f:fs) = case unsafePerformIO result of
-                                Nothing -> x
-                                Just newX -> tryTransformations newX fs
-    where
-      result = catch (dangerous (Just x) (liftM f)) (\e -> do
-                                                       putStrLn $ "Got an error: " ++ (show $ (e :: SomeException))
-                                                       return Nothing)
+getMBRRecursively :: Node -> Rect
+getMBRRecursively (IntNode lhv mbr children) = mconcat $ map getMBRRecursively children
+getMBRRecursively (LeafNode idRects) = mconcat (map getRect idRects)
+
+prop_HilbertValsOrdered :: Node -> Bool
+prop_HilbertValsOrdered (IntNode {}) = True -- Ignore interior nodes
+prop_HilbertValsOrdered l@(LeafNode _) = isOrdered $ getHilbertValues l
+
+
+
+--------------------------------------------------------------------------
+-- * The actual properties
+
+
+
+{- Inserting IDRects into a leaf puts them in in order of increasing Hilbert value -}
+prop_orderedLeafInserts :: [IDRect] -> Bool
+prop_orderedLeafInserts idRects = isOrdered $ getHilbertValues leafNode where
+  leafNode = insertAll (LeafNode [])
+  insertAll = foldl (.) id (map insert idRects)
+
+prop_intersectionTests :: [IDRect] -> Rect -> Bool
+prop_intersectionTests rects queryRect =
+  sort (map getId intersectingRects) == sort (search queryRect builtTree)
+  where
+    intersectingRects = [x | x <- rects, (getRect x) `rectanglesIntersect` queryRect]
+    builtTree = insertAll rects emptyRTree
+
+prop_insertionMakesValidTree :: [IDRect] -> Bool
+prop_insertionMakesValidTree idRects = isValidTree builtTree where
+  builtTree = insertAll idRects emptyRTree
+
+prop_generatedTreeIsValid :: RTree -> Bool
+prop_generatedTreeIsValid = isValidTree

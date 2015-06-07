@@ -1,12 +1,12 @@
 module Util where
 
-import Params
-import Types
 import Data.Bits
 import Data.List (foldl')
 import Data.List.Split (chunksOf)
+import Data.Monoid
+import Params
+import Types
 
-import Zora.Graphing.DAGGraphing
 import System.IO.Unsafe (unsafePerformIO)
 
 hilbertDistance :: (Num a, Bits a, Ord a) => Int -> (a,a) -> a
@@ -43,19 +43,18 @@ a & b = b a
 rectCenter :: Rect -> (Integer, Integer)
 rectCenter (Rect xl yl xh yh) = (xh - xl, yh - yl)
 
-boundingRect :: [Rect] -> Rect
-boundingRect (x:xs) = foldl' f x xs where
-  f (Rect xl1 yl1 xh1 yh1) (Rect xl2 yl2 xh2 yh2) = Rect (min xl1 xl2) (min yl1 yl2) (max xh1 xh2) (max yh1 yh2)
+instance Monoid Rect where
+  mempty = (Rect 0 0 0 0)
+  mappend (Rect xl1 yl1 xh1 yh1) (Rect xl2 yl2 xh2 yh2) = Rect (min xl1 xl2) (min yl1 yl2) (max xh1 xh2) (max yh1 yh2)
 
 getBoundingRect :: Node -> Rect
 getBoundingRect (IntNode _ rect _) = rect
-getBoundingRect (LeafNode idRects) = boundingRect $ map getRect idRects
-
+getBoundingRect (LeafNode idRects) = mconcat $ map getRect idRects
 
 buildIntNode :: [Node] -> Node
 buildIntNode children = IntNode lhv rect children where
   lhv = maximum $ map getLHV children
-  rect = boundingRect (map getBoundingRect children)
+  rect = mconcat (map getBoundingRect children)
 
 getLHV :: Node -> LHV
 getLHV (IntNode lhv _ _) = lhv
@@ -89,18 +88,12 @@ isLeafNode :: Node -> Bool
 isLeafNode (IntNode _ _ _) = False
 isLeafNode (LeafNode _) = True
 
-instance DAGGraphable Node where
-  expand (LeafNode idRects) = Just (Just $ show idRects, [])
-  expand (IntNode lhv rect children) = Just (Just $ show (lhv, rect), map f children) where
-    f n@(LeafNode _) = (Just $ show $ maximum $ getHilbertValues n, n)
-    f n@(IntNode lhv _ _) = (Just $ show lhv, n)
-
 getChildRects :: Node -> [Rect]
 getChildRects n@(LeafNode _) = map getRect $ getIDRects n
 getChildRects (IntNode _ _ children) = map getNodeRect children
 
 getNodeRect :: Node -> Rect
-getNodeRect (LeafNode idRects) = boundingRect $ map getRect idRects
+getNodeRect (LeafNode idRects) = mconcat $ map getRect idRects
 getNodeRect (IntNode _ r _) = r
 
 getLeafChildren :: Node -> [Node]
@@ -110,8 +103,6 @@ getLeafChildren (LeafNode {}) = error "Tried to get leaf children of LeafNode"
 getIntChildren :: Node -> [Node]
 getIntChildren (IntNode _ _ children) = filter (not . isLeafNode) children
 getIntChildren (LeafNode {}) = error "Tried to get int children of LeafNode"
-
-
 
 {- Divide a list of items as evenly as possible into n groups -}
 distributeItems :: Int -> [a] -> [[a]]

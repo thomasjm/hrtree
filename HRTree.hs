@@ -6,9 +6,11 @@ import Types
 import Util
 import Zipper
 
+-- import Data.Foldable hiding (concatMap, all, maximum)
 import Data.Function (on)
-import Data.Maybe (fromJust, mapMaybe)
 import Data.List (foldl', intercalate, find, findIndex, sortBy)
+import Data.Maybe (fromJust, mapMaybe)
+import Data.Monoid
 
 import System.Directory
 import System.FilePath
@@ -27,6 +29,10 @@ instance TreeZippable Node (LHV, Rect) where
   getChildren (IntNode _ _ children) = children
   newNode (lhv, mbr) = IntNode lhv mbr
 
+-- instance Foldable Node where
+--   foldMap f (IntNode lhv mbr children) = mconcat (map (foldMap f) children)
+--   foldMap f (LeafNode rects) = undefined
+
 type NodeZipper = Loc Node (LHV, Rect)
 
 {- Search -}
@@ -44,9 +50,13 @@ chooseLeaf h n = case focus n of
                              Nothing -> chooseLeaf h (down (length children - 1) n)
 
 {- Insert -}
+
+insertAll :: [IDRect] -> RTree -> RTree
+insertAll rects = (foldl (.) id (map insert rects))
+
 insert :: IDRect -> RTree -> RTree
-insert idRect node = (trace ("Chosen leaf: " ++ (show $ focus leaf))) $
-                     (trace ("Got new leaf: " ++ (show newLeaf))) $
+insert idRect node = -- (trace ("Chosen leaf: " ++ (show $ focus leaf))) $
+                     -- (trace ("Got new leaf: " ++ (show newLeaf))) $
 
                      leaf
                      -- & logState "chosen"
@@ -72,7 +82,7 @@ fixupNode :: Node -> Node
 fixupNode n@(LeafNode {}) = n -- Nothing to be done
 fixupNode n@(IntNode _ _ children) = IntNode lhv rect children where
   lhv = maximum $ map getLHV children
-  rect = boundingRect $ map getBoundingRect children
+  rect = mconcat $ map getBoundingRect children
 
 -- Handle overflow of leaf node. Takes in a NodeZipper that's pointed at a leaf node,
 -- and splits it up if necessary. Returns the parent
@@ -128,12 +138,12 @@ emptyRTree = LeafNode []
 ----------------------------------------------------------------------------
 
 
-logStateIO :: String -> NodeZipper -> IO NodeZipper
-logStateIO s nz = do
-  let num = unsafePerformIO (getStdRandom (randomR (0, 100000000))) :: Int
-      filename = "/tmp/hrtree/" ++ s ++ "_" ++ (show num) ++ "_" ++ ".png"
-  render filename $ root nz
-  return nz
+-- logStateIO :: String -> NodeZipper -> IO NodeZipper
+-- logStateIO s nz = do
+--   let num = unsafePerformIO (getStdRandom (randomR (0, 100000000))) :: Int
+--       filename = "/tmp/hrtree/" ++ s ++ "_" ++ (show num) ++ "_" ++ ".png"
+--   render filename $ root nz
+--   return nz
 
-logState :: String -> NodeZipper -> NodeZipper
-logState s nz = unsafePerformIO $ logStateIO s nz
+-- logState :: String -> NodeZipper -> NodeZipper
+-- logState s nz = unsafePerformIO $ logStateIO s nz
