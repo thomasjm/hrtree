@@ -42,13 +42,22 @@ instance Arbitrary IDRect where
 instance Arbitrary RTree where
   arbitrary = tree
 
+leafNode :: Gen Node
+leafNode = do
+  numRects <- choose (1, cl)
+  liftM LeafNode (vectorOf numRects (arbitrary :: Gen IDRect))
+
 tree :: Gen Node
 tree = sized tree'
 tree' :: Int -> Gen Node
-tree' 0 = liftM LeafNode arbitrary
-tree' n | n > 0 =
-	oneof [liftM LeafNode (resize n $ listOf (arbitrary :: Gen IDRect)),
-	       liftM3 IntNode arbitrary arbitrary (listOf (tree' (n `div` 2)))]
+tree' 0 = leafNode
+tree' n | n > 0 = oneof [leafNode, do
+  numSubNodes <- choose (1, cn)
+  subNodes <- vectorOf numSubNodes (tree' (n `div` 2))
+  let lhv = maximum (map getLHVRecursively subNodes)
+  let mbr = mconcat (map getMBRRecursively subNodes)
+  return $ IntNode lhv mbr subNodes]
+
 
 --------------------------------------------------------------------------
 -- * Checking that a tree is actually valid
@@ -60,9 +69,10 @@ isValidTree :: Node -> Bool
 isValidTree n@(IntNode lhv mbr children) = and [
   lhv == maximum (map getLHVRecursively children),
   mbr == mconcat (map getMBRRecursively children),
-  prop_HilbertValsOrdered n
+  prop_HilbertValsOrdered n,
+  length children <= cn
   ]
-isValidTree (LeafNode _) = True
+isValidTree (LeafNode idRects) = length idRects <= cl
 
 getLHVRecursively :: Node -> LHV
 getLHVRecursively (IntNode lhv mbr children) = maximum $ map getLHVRecursively children
