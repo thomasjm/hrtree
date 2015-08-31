@@ -91,7 +91,14 @@ prop_HilbertValsOrdered l@(LeafNode _) = isOrdered $ getHilbertValues l
 --------------------------------------------------------------------------
 -- * The actual properties
 
+{- The arbirary instances generate valid trees -}
+prop_generatedTreeIsValid :: RTree -> Bool
+prop_generatedTreeIsValid = isValidTree
 
+{- Building a tree up with insertions results in a valid tree -}
+prop_insertionMakesValidTree :: [IDRect] -> Bool
+prop_insertionMakesValidTree idRects = isValidTree builtTree where
+  builtTree = insertAll idRects emptyRTree
 
 {- Inserting IDRects into a leaf puts them in in order of increasing Hilbert value -}
 prop_orderedLeafInserts :: [IDRect] -> Bool
@@ -99,16 +106,10 @@ prop_orderedLeafInserts idRects = isOrdered $ getHilbertValues leafNode where
   leafNode = insertAll (LeafNode [])
   insertAll = foldl (.) id (map insert idRects)
 
+{- Inserting a bunch of rects and then searching for a query rect works -}
 prop_intersectionTests :: [IDRect] -> Rect -> Bool
 prop_intersectionTests rects queryRect =
   sort (map getId intersectingRects) == sort (search queryRect builtTree)
   where
     intersectingRects = [x | x <- rects, (getRect x) `rectanglesIntersect` queryRect]
     builtTree = insertAll rects emptyRTree
-
-prop_insertionMakesValidTree :: [IDRect] -> Bool
-prop_insertionMakesValidTree idRects = isValidTree builtTree where
-  builtTree = insertAll idRects emptyRTree
-
-prop_generatedTreeIsValid :: RTree -> Bool
-prop_generatedTreeIsValid = isValidTree
