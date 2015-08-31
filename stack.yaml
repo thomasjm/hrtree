@@ -1,0 +1,6 @@
+flags: {}
+packages:
+- '.'
+- Zora-1.1.18/
+extra-deps: ['syz-0.2.0.0']
+resolver: lts-2.22

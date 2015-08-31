@@ -60,7 +60,7 @@ tree' n | n > 0 = oneof [leafNode, do
 
 
 --------------------------------------------------------------------------
--- * Checking that a tree is actually valid
+-- * Checking that a tree is valid
 
 {- Check that a tree is valid. This includes
    1. The LHV and MBR of each interior node are correct

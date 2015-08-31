@@ -16,7 +16,7 @@ build-type:          Simple
 cabal-version:       >=1.10
 
 library
-  exposed-modules:     HRTree, Main
+  exposed-modules:     HRTree
   -- other-modules:
   -- other-extensions:
   build-depends:       QuickCheck >= 2.7.6

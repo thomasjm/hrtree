@@ -1,8 +1,8 @@
 module Main where
 
 import HRTree
-import Util
 import Types
+import Util
 
 import Test.Hspec
 

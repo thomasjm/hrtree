@@ -2,14 +2,14 @@ module Main where
 
 import Test.QuickCheck
 
-import HRTree
 import DiagramHRTree
+import HRTree
 import QuickcheckTests
 
-import Diagrams.TwoD.Size
 import Diagrams.Backend.SVG
+import Diagrams.TwoD.Size
 
-mn = do
+main = do
   randomTree <- generate tree
   let diagram = diagramHRTree randomTree
       filepath = "/tmp/diagram.svg"
