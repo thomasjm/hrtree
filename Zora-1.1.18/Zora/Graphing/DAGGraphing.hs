@@ -25,27 +25,27 @@ module Zora.Graphing.DAGGraphing
 ) where
 
 import Shelly (shelly, run_, setStdin)
-import System.Directory (removeFile, getDirectoryContents)
-import Control.Exception
-import System.IO.Error hiding (catch)
+
+-- import Control.Exception
+-- import System.IO.Error hiding (catch)
 
 import Data.Maybe
 import Data.String (fromString)
-import Data.Tuple
+-- import Data.Tuple
 
 import Data.Monoid
 
-import qualified Data.Map as M
+-- import qualified Data.ByteString.Char8 as ByteString
 import qualified Data.List as L hiding (zip, map, length, take, drop, takeWhile, last, filter, concatMap)
+-- import qualified Data.Map as M
 import qualified Data.Text as Tx
 import qualified Data.Text.Lazy as Ly
-import qualified Data.ByteString.Char8 as ByteString
 
 --  hiding (Graph, Edge, Node)
 import Data.Graph.Inductive
 import Data.GraphViz
 import Data.GraphViz.Attributes.Complete hiding (show_node, Label)
-import Data.Word
+-- import Data.Word
 
 type Label = Int
 

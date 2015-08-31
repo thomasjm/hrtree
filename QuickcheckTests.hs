@@ -11,16 +11,16 @@ import Types
 import Util
 
 import Control.Monad
-import Data.Function (on)
+-- import Data.Function (on)
 import Data.List (sortBy, sort)
 import Data.Monoid
 
-import Control.Exception
-import Debug.Trace (trace)
-import DiagramHRTree
-import Shelly (run, liftIO, shelly, escaping)
-import System.IO.Unsafe (unsafePerformIO)
-import Zora.Graphing.DAGGraphing (render)
+-- import Control.Exception
+-- import Debug.Trace (trace)
+-- import DiagramHRTree
+-- import Shelly (run, liftIO, shelly, escaping)
+-- import System.IO.Unsafe (unsafePerformIO)
+-- import Zora.Graphing.DAGGraphing (render)
 
 
 runTests = $quickCheckAll

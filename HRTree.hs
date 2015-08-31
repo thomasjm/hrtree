@@ -9,18 +9,18 @@ import Zipper
 -- import Data.Foldable hiding (concatMap, all, maximum)
 import Data.Function (on)
 import Data.List (foldl', intercalate, find, findIndex, sortBy)
-import Data.Maybe (fromJust, mapMaybe)
+-- import Data.Maybe (fromJust, mapMaybe)
 import Data.Monoid
 
-import System.Directory
-import System.FilePath
-import Text.Read
+-- import System.Directory
+-- import System.FilePath
+-- import Text.Read
 
 -- Debugging stuff
-import Zora.Graphing.DAGGraphing (render)
-import Debug.Trace (trace, traceShow)
+-- import Zora.Graphing.DAGGraphing (render)
+-- import Debug.Trace (trace, traceShow)
 import System.IO.Unsafe (unsafePerformIO)
-import System.Random
+-- import System.Random
 
 
 {- Define a TreeZippable instance for Node and a convenience type synonym -}
@@ -52,7 +52,7 @@ chooseLeaf h n = case focus n of
 {- Insert -}
 
 insertAll :: [IDRect] -> RTree -> RTree
-insertAll rects = (foldl (.) id (map insert rects))
+insertAll rects = foldl (.) id (map insert rects)
 
 insert :: IDRect -> RTree -> RTree
 insert idRect node = -- (trace ("Chosen leaf: " ++ (show $ focus leaf))) $

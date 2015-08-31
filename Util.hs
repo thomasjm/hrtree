@@ -1,3 +1,4 @@
+{-# OPTIONS -fno-warn-orphans #-}
 module Util where
 
 import Data.Bits
@@ -6,8 +7,6 @@ import Data.List.Split (chunksOf)
 import Data.Monoid
 import Params
 import Types
-
-import System.IO.Unsafe (unsafePerformIO)
 
 hilbertDistance :: (Num a, Bits a, Ord a) => Int -> (a,a) -> a
 hilbertDistance d (x,y)
